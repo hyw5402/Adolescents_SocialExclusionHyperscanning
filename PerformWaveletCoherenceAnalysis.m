@@ -1,9 +1,9 @@
-%% calculate the wavelet coherence Yuwen 20231023 
+%% calculate the wavelet coherence Owen 20231023 
 clear all; close all;
 %% 
-path_data='/home/DataDisk/Owen/fifth_hospital/Cyberball/AftPreprocess_CM_pca';
-path_cond='/home/DataDisk/Owen/fifth_hospital/Cyberball/Info';
-path_output='/home/DataDisk/Owen/fifth_hospital/Cyberball/WaveletCoherence_aftC_pca';
+path_data='/home/DataDisk/Owen/fifth_hospital/Cyberball/AftPreprocess_CM_pca'; % the path containing NIRS data after preprocessing
+path_cond='/home/DataDisk/Owen/fifth_hospital/Cyberball/Info';                 % the path contraining behavioral data
+path_output='/home/DataDisk/Owen/fifth_hospital/Cyberball/WaveletCoherence_aftC_pca';  % the path for output
 addpath('/home/DataDisk/Owen/fifth_hospital/Cyberball/Info');
 if ~exist(path_output,'dir')
     mkdir(path_output);
@@ -19,26 +19,25 @@ subjFiles=cellstr(subjFiles);
 condition_data=load(fullfile(path_cond,'output_table_4wtc_2405.mat'));
 condition_data=condition_data.output_table;
 
- parpool(30);
-% freq_range[0.01,0.12  0.35-0.7
+ parpool(30);  % open parallel workers
 
-% pairs_of_channels=[4,45;5,46];
-channel_s1=[1:16];
+channel_s1=[1:16]; % channels selected; channel 17 & 18 are reference channels
 channel_s2=[19:34];
 num_fs=80;
 
  parfor i=1:length(subjFiles)
  % for i=1%:length(subjFiles)   
+ % read data file
     nirs_data=load(fullfile(path_data,subjFiles{i}));
     % nirs_data=nirs_data.nirsdata;
     nirs_data=nirs_data.data_filter;
-    % condition file
+    % read condition file
     temp_name=strrep(subjFiles{i},'.mat','');
     temp_cond_data=condition_data(temp_name,:);
     temp_cond_data=table2array(temp_cond_data);
     
 %     mean_indv_wlc_Rsq=zeros(length(combined_1),length(combined_2),5);
-    mean_indv_wlc_Rsq=cell(length(channel_s1),length(channel_s2),5);
+    mean_indv_wlc_Rsq=cell(length(channel_s1),length(channel_s2),5);  % initiate output cells
     
     mean_indv_wlc_Rsq_3stage=cell(length(channel_s1),length(channel_s2),3);
     
@@ -70,13 +69,13 @@ num_fs=80;
           
              % [Rsq_1,period_1,~,coi_1,~]=wtc(x_data_1,y_data_1,'S0',10,'ms',1000,'AR1','auto'); 
              % incoi_1=period_1(:)*(1./coi_1)>1;
-                  [Rsq_1,~,period_1,coi_1,~]=wcoherence(x_data_1,y_data_1,10,'FrequencyLimits',[0.01,1]); 
+                  [Rsq_1,~,period_1,coi_1,~]=wcoherence(x_data_1,y_data_1,10,'FrequencyLimits',[0.01,1]); % calculate wavelet coherence in frequency range: 0.01-1
             
+                  % reset abnormal data
                    Rsq_1(Rsq_1<0)=0;
                    Rsq_1(Rsq_1>=1)=0.99;
 
               % fisher z
-
                   Rsq_1= 0.5.*log((1+Rsq_1)./(1-Rsq_1));
                   
 % mean_indv_wlc_Rsq(j,jj,k)=mean(Rsq,'all','omitnan');
@@ -94,6 +93,7 @@ num_fs=80;
             % incoi=period(:)*(1./coi)>1;
        % 
 
+       %% arrange results
     for k=1:5
       
         if k==1
@@ -162,7 +162,7 @@ num_fs=80;
       output_data{4,2}=error_status;
       output_data{5,2}=error_messages;
 %       temp_name=strrep(subjFiles{i},'_converted_data.mat','');
-      parsave(fullfile(path_output,[temp_name '.mat']),output_data);
+      parsave(fullfile(path_output,[temp_name '.mat']),output_data); % save data
     fprintf('\n %s finished!',subjFiles{i});
 end
         
